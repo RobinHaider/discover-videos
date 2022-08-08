@@ -7,14 +7,14 @@ import Loading from '../components/loading/loading';
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const handleLoggedIn = async () => {
       const isLoggedIn = await magic.user.isLoggedIn();
       if (isLoggedIn) {
         // route to /
-        router.push('/');
+        // router.push('/');
       } else {
         // route to /login
         router.push('/login');
