@@ -1,28 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './navbar.module.css';
 
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
+
 import { magic } from '../../lib/magic-client';
 
 const NavBar = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [username, setUsername] = useState('');
+  const [didToken, setDidToken] = useState('');
   const router = useRouter();
 
   useEffect(() => {
-    async function getUsername() {
+    const applyUsernameInNav = async () => {
       try {
-        const { email } = await magic.user.getMetadata();
+        const { email, issuer } = await magic.user.getMetadata();
+        const didToken = await magic.user.getIdToken();
         if (email) {
           setUsername(email);
+          setDidToken(didToken);
         }
       } catch (error) {
-        console.log('Error retrieving email:', error);
+        console.error('Error retrieving email', error);
       }
-    }
-    getUsername();
+    };
+    applyUsernameInNav();
   }, []);
 
   const handleOnClickHome = (e) => {
@@ -44,9 +48,15 @@ const NavBar = () => {
     e.preventDefault();
 
     try {
-      await magic.user.logout();
-      console.log(await magic.user.isLoggedIn());
-      router.push('/login');
+      const response = await fetch('/api/logout', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${didToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const res = await response.json();
     } catch (error) {
       console.error('Error logging out', error);
       router.push('/login');
@@ -56,16 +66,18 @@ const NavBar = () => {
   return (
     <div className={styles.container}>
       <div className={styles.wrapper}>
-        <a className={styles.logoLink}>
-          <div className={styles.logoWrapper}>
-            <Image
-              src='/static/netflix.svg'
-              alt='Netflix logo'
-              width='128px'
-              height='34px'
-            />
-          </div>
-        </a>
+        <Link className={styles.logoLink} href='/'>
+          <a>
+            <div className={styles.logoWrapper}>
+              <Image
+                src='/static/netflix.svg'
+                alt='Netflix logo'
+                width='128px'
+                height='34px'
+              />
+            </div>
+          </a>
+        </Link>
 
         <ul className={styles.navItems}>
           <li className={styles.navItem} onClick={handleOnClickHome}>
@@ -79,13 +91,15 @@ const NavBar = () => {
           <div>
             <button className={styles.usernameBtn} onClick={handleShowDropdown}>
               <p className={styles.username}>{username}</p>
+              {/** Expand more icon */}
               <Image
-                src='/static/expand_more.svg'
-                alt='Expand more'
+                src={'/static/expand_more.svg'}
+                alt='Expand dropdown'
                 width='24px'
                 height='24px'
               />
             </button>
+
             {showDropdown && (
               <div className={styles.navDropdown}>
                 <div>
